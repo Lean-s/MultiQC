@@ -586,6 +586,7 @@ module_order:
   - bbduk
   - clipandmerge
   - cutadapt
+  - trim_galore
   - flexbar
   - sourmash
   - kaiju
