@@ -506,6 +506,10 @@ hicpro/assplit:
 hifiasm:
   contents: "[M::ha_analyze_count]"
   num_lines: 1
+hifi_trimmer:
+  fn: "*.json"
+  contents: '"total_reads_trimmed"'
+  num_lines: 10
 hisat2:
   contents: "HISAT2 summary stats:"
 homer/findpeaks:
