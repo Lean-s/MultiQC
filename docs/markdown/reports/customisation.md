@@ -45,10 +45,10 @@ show_analysis_paths: False
 show_analysis_time: False
 ```
 
-## Report Logo
+## Report Logo / Favicon
 
 To add your own custom logo to reports, you can add the following
-three lines to your MultiQC configuration file:
+lines to your MultiQC configuration file:
 
 ```yaml
 custom_logo: "/abs/path/to/logo.png"
@@ -62,6 +62,16 @@ Only `custom_logo` is needed. The URL will make the logo open up
 a new web browser tab with your address and the title sets the mouse
 hover title text. Width allows you to adjust the logo size and dark
 lets you have an alternate variant shown when the report is in dark mode.
+
+If you like, you can also provide a custom favicon (the icon shown in the browser
+address bar):
+
+```yaml
+custom_favicon: "/abs/path/to/favicon.png"
+```
+
+Favicons and logos can be any of the following file formats:
+`.png`, `.svg`, `.ico`, `.gif`, `.jpg`, `.jpeg`, `.webp`.
 
 ## Project level information
 

@@ -190,6 +190,10 @@ class MultiQCConfig(BaseModel):
             examples=[200],
             gt=0,
         )
+        custom_favicon: Optional[str] = cfg(
+            "Path to a custom favicon image to show in the browser tab.",
+            examples=["/path/to/favicon.ico", "./assets/favicon.png"],
+        )
         custom_css_files: Optional[List[str]] = cfg(
             "Paths to additional CSS files to inline into the report. Useful for branding overrides.",
             examples=[["./assets/custom.css", "./assets/branding.css"]],
