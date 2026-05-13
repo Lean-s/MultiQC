@@ -34,6 +34,7 @@ The config wizard is a static HTML file that is bundled with the MultiQC repo, b
 
 ### Module updates
 
+- Bases2Fastq: Major upgrade to the module, now shows a lot more information ([#3460](https://github.com/MultiQC/MultiQC/pull/3460))
 - Falco: Add native recognition for Falco output ([#3497](https://github.com/MultiQC/MultiQC/pull/3497))
 - Fastp: Add % surviving bases ([#3472](https://github.com/MultiQC/MultiQC/pull/3472))
 - Sequali: Expand general statistics, add normalised plots ([#3530](https://github.com/MultiQC/MultiQC/pull/3530))
