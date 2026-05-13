@@ -1,8 +1,6 @@
 name: Claude Code Review Trigger
 
 on:
-  pull_request:
-    types: [opened]
   issue_comment:
     types: [created]
 
@@ -16,7 +14,6 @@ jobs:
       contents: read
       pull-requests: read
     # Only run on PR comments (issue_comment fires for both issues and PRs)
-    # or when PR is opened
     if: |
       github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' &&
