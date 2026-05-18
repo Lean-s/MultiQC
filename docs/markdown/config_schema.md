@@ -24,27 +24,35 @@ Configuration values are loaded in the following order of precedence (highest to
 The options below can be specified in your YAML configuration files.
 For boolean options, use `true` or `false` (all lowercase) in your YAML files.
 
+:::tip
+
+If you'd rather build your config visually, the [Config Wizard](https://seqera.io/multiqc_config_wizard) renders every option below as a form field with the same descriptions and defaults, and validates as you type.
+
+:::
+
 ## Report Meta
 
-### title
+### Header text
+
+#### `title`
 
 **Type**: `str`
 
 Title shown at the top of the report and used in the page title.
 
-### subtitle
+#### `subtitle`
 
 **Type**: `str`
 
 Subtitle shown under the report title. Plain text only.
 
-### intro_text
+#### `intro_text`
 
 **Type**: `str`
 
 Paragraph shown under the title. Useful for adding context about the analysis.
 
-### report_comment
+#### `report_comment`
 
 **Type**: `str`
 
@@ -56,7 +64,7 @@ Free-text comment shown at the top of the report. HTML is allowed.
 report_comment: This report was generated from the RNA-seq pipeline on 2024-08-21.
 ```
 
-### report_header_info
+#### `report_header_info`
 
 **Type**: `List[Dict[str, str]]`
 
@@ -72,13 +80,15 @@ report_header_info:
   - Sequencing Platform: HiSeq 2500 High Output V4
 ```
 
-### show_analysis_paths
+### Report generation info
+
+#### `show_analysis_paths`
 
 **Type**: `bool` (default: `true`)
 
 Show the absolute paths of analysed directories in the report header.
 
-### show_analysis_time
+#### `show_analysis_time`
 
 **Type**: `bool` (default: `true`)
 
@@ -86,49 +96,35 @@ Show the date and time the report was generated in the header.
 
 ## Report Appearance
 
-### template
+### Template
+
+#### `template`
 
 **Type**: `str` (default: `"default"`)
 
 Name of the report template. Built-in templates: default, original, simple, sections, gathered, geo, disco. Plugin packages can register additional templates via the `multiqc.templates.v1` entry point.
 
-**Examples**:
+**Example**:
 
 ```yaml
 template: default
 ```
 
-```yaml
-template: original
-```
-
-```yaml
-template: simple
-```
-
-```yaml
-template: sections
-```
-
-```yaml
-template: gathered
-```
-
-```yaml
-template: geo
-```
-
-```yaml
-template: disco
-```
-
-### template_dark_mode
+#### `template_dark_mode`
 
 **Type**: `bool` (default: `true`)
 
 Enable the dark mode toggle in the report template.
 
-### custom_logo
+#### `simple_output`
+
+**Type**: `bool` (default: `false`)
+
+Render a minimal HTML report without the toolbox or interactive widgets. Useful for very large reports.
+
+### Logo
+
+#### `custom_logo`
 
 **Type**: `str`
 
@@ -144,7 +140,7 @@ custom_logo: /path/to/logo.png
 custom_logo: ./assets/logo.svg
 ```
 
-### custom_logo_dark
+#### `custom_logo_dark`
 
 **Type**: `str`
 
@@ -156,7 +152,7 @@ Path to an alternative logo for dark mode. Falls back to custom_logo if unset.
 custom_logo_dark: ./assets/logo_dark.svg
 ```
 
-### custom_logo_url
+#### `custom_logo_url`
 
 **Type**: `str`
 
@@ -168,7 +164,7 @@ URL the custom logo links to when clicked.
 custom_logo_url: https://www.scilifelab.se
 ```
 
-### custom_logo_title
+#### `custom_logo_title`
 
 **Type**: `str`
 
@@ -180,7 +176,7 @@ Tooltip text shown when hovering over the custom logo.
 custom_logo_title: Our institute name
 ```
 
-### custom_logo_width
+#### `custom_logo_width`
 
 **Type**: `int`
 
@@ -192,7 +188,9 @@ Logo width in pixels. Height scales proportionally.
 custom_logo_width: 200
 ```
 
-### custom_favicon
+### Branding
+
+#### `custom_favicon`
 
 **Type**: `str`
 
@@ -208,7 +206,7 @@ custom_favicon: /path/to/favicon.ico
 custom_favicon: ./assets/favicon.png
 ```
 
-### custom_css_files
+#### `custom_css_files`
 
 **Type**: `List[str]`
 
@@ -219,18 +217,14 @@ Paths to additional CSS files to inline into the report. Useful for branding ove
 ```yaml
 custom_css_files:
   - ./assets/custom.css
-  - ./assets/branding.css
+  - /path/to/branding.css
 ```
-
-### simple_output
-
-**Type**: `bool` (default: `false`)
-
-Render a minimal HTML report without the toolbox or interactive widgets. Useful for very large reports.
 
 ## Report Contents
 
-### custom_content
+### Custom content
+
+#### `custom_content`
 
 **Type**: `Dict[str, Any]`
 
@@ -255,19 +249,21 @@ custom_content:
     - my-other-section-id
 ```
 
-### custom_content_modules
+#### `custom_content_modules`
 
 **Type**: `List[str]`
 
 Extra module IDs whose output should be parsed as custom content.
 
-### custom_data
+#### `custom_data`
 
 **Type**: `Dict[str, Any]`
 
 Inline custom content data keyed by section ID. Companion to custom_content for users who prefer splitting the metadata and the data across two top-level keys.
 
-### top_modules
+### Module ordering
+
+#### `top_modules`
 
 **Type**: `List[Union[str, Dict[str, Dict[str, Any]]]]`
 
@@ -281,7 +277,7 @@ top_modules:
   - cutadapt
 ```
 
-### module_order
+#### `module_order`
 
 **Type**: `List[Union[str, Dict[str, Dict[str, Any]]]]`
 
@@ -422,6 +418,7 @@ Order in which modules appear in the report. Each entry is either a module ID, o
 - sickle
 - skewer
 - sortmerna
+- ribodetector
 - biobloomtools
 - seqfu
 - fastq_screen
@@ -477,7 +474,7 @@ module_order:
   - cutadapt
 ```
 
-### run_modules
+#### `run_modules`
 
 **Type**: `List[str]`
 
@@ -492,7 +489,7 @@ run_modules:
   - samtools
 ```
 
-### exclude_modules
+#### `exclude_modules`
 
 **Type**: `List[str]`
 
@@ -505,7 +502,7 @@ exclude_modules:
   - fastqc
 ```
 
-### remove_sections
+#### `remove_sections`
 
 **Type**: `List[str]`
 
@@ -519,7 +516,7 @@ remove_sections:
   - gatk-compare-overlap
 ```
 
-### report_section_order
+#### `report_section_order`
 
 **Type**: `Dict[str, Any]`
 
@@ -535,7 +532,9 @@ report_section_order:
     order: -10
 ```
 
-### section_comments
+### Section comments + indicators
+
+#### `section_comments`
 
 **Type**: `Dict[str, str]`
 
@@ -550,7 +549,7 @@ section_comments:
   samtools: Reviewed by *Phil* on 2024-08-21.
 ```
 
-### section_status_checks
+#### `section_status_checks`
 
 **Type**: `Dict[str, Union[bool, Dict[str, bool]]]`
 
@@ -567,37 +566,53 @@ section_status_checks:
 
 ## Output Options
 
-### force
+### Report file
+
+#### `force`
 
 **Type**: `bool` (default: `false`)
 
 Overwrite existing output files without prompting.
 
-### output_fn_name
+#### `output_fn_name`
 
 **Type**: `str` (default: `"multiqc_report.html"`)
 
 Filename for the generated HTML report. Defaults to multiqc_report.html.
 
-### data_dir_name
+#### `make_report`
+
+**Type**: `bool` (default: `true`)
+
+Generate the HTML report. Set to false to only produce data files.
+
+### Data files
+
+#### `make_data_dir`
+
+**Type**: `bool` (default: `true`)
+
+Write parsed data as files alongside the report.
+
+#### `zip_data_dir`
+
+**Type**: `bool` (default: `false`)
+
+Compress the data directory into a single .zip file.
+
+#### `data_dir_name`
 
 **Type**: `str` (default: `"multiqc_data"`)
 
 Name of the directory written alongside the report holding parsed data. Defaults to multiqc_data.
 
-### plots_dir_name
-
-**Type**: `str` (default: `"multiqc_plots"`)
-
-Directory for exported plot images when export_plots is on. Defaults to multiqc_plots.
-
-### data_format
+#### `data_format`
 
 **Type**: `Literal["tsv", "csv", "json", "yaml"]` (default: `"tsv"`)
 
 Format used when writing parsed data files.
 
-### data_format_extensions
+#### `data_format_extensions`
 
 **Type**: `Dict[str, str]` (default: `{"tsv":"txt","csv":"csv","json":"json","yaml":"yaml"}`)
 
@@ -612,67 +627,61 @@ data_format_extensions:
   yaml: yml
 ```
 
-### parquet_format
+#### `parquet_format`
 
 **Type**: `Literal["long", "wide"]` (default: `"long"`)
 
 Parquet table layout. 'long' has rows of (sample_name, metric_name, val_raw, val_raw_type, val_str), easy to filter by metric. 'wide' uses one column per metric (prefixed with table name and namespace), easier for analytics but can hit column limits or mixed-type issues.
 
-### make_data_dir
+### Data dump
 
-**Type**: `bool` (default: `true`)
-
-Write parsed data as files alongside the report.
-
-### zip_data_dir
-
-**Type**: `bool` (default: `false`)
-
-Compress the data directory into a single .zip file.
-
-### data_dump_file
+#### `data_dump_file`
 
 **Type**: `bool` (default: `true`)
 
 Write a single JSON file containing all parsed data, for re-running MultiQC later.
 
-### data_dump_file_write_raw
+#### `data_dump_file_write_raw`
 
 **Type**: `bool` (default: `true`)
 
 Include raw values (before any normalisation or filtering) in the dumped JSON.
 
-### export_plots
+### Plot export
+
+#### `export_plots`
 
 **Type**: `bool` (default: `false`)
 
 Save each plot as a static image (formats set by export_plot_formats).
 
-### export_plot_formats
+#### `export_plot_formats`
 
 **Type**: `List[Literal["png", "svg", "pdf"]]` (default: `["png","svg","pdf"]`)
 
 Image formats to export when export_plots is on.
 
-### export_plots_timeout
+#### `export_plots_timeout`
 
 **Type**: `int` (default: `60`)
 
 Timeout for exporting each plot, in seconds.
 
-### make_report
+#### `plots_dir_name`
 
-**Type**: `bool` (default: `true`)
+**Type**: `str` (default: `"multiqc_plots"`)
 
-Generate the HTML report. Set to false to only produce data files.
+Directory for exported plot images when export_plots is on. Defaults to multiqc_plots.
 
-### make_pdf
+### PDF
+
+#### `make_pdf`
 
 **Type**: `bool` (default: `false`)
 
 Also generate a PDF version of the report. Requires Pandoc to be installed.
 
-### pandoc_template
+#### `pandoc_template`
 
 **Type**: `str`
 
@@ -680,19 +689,21 @@ Path to a Pandoc template used when exporting the report as PDF.
 
 ## Sample Names
 
-### prepend_dirs
+### Prepend directory
+
+#### `prepend_dirs`
 
 **Type**: `bool` (default: `false`)
 
 Prefix sample names with their parent directory. Useful when the same sample name occurs in multiple directories.
 
-### prepend_dirs_depth
+#### `prepend_dirs_depth`
 
 **Type**: `int` (default: `0`)
 
 How many parent directories to include. 0 means all the way to the root.
 
-### prepend_dirs_sep
+#### `prepend_dirs_sep`
 
 **Type**: `str` (default: `" | "`)
 
@@ -708,13 +719,15 @@ prepend_dirs_sep: _
 prepend_dirs_sep: " - "
 ```
 
-### fn_clean_sample_names
+### Name cleaning
+
+#### `fn_clean_sample_names`
 
 **Type**: `bool` (default: `true`)
 
 Apply the cleaning rules in fn_clean_exts and fn_clean_trim to sample names.
 
-### extra_fn_clean_exts
+#### `extra_fn_clean_exts`
 
 **Type**: `List[Union[str, CleanPattern]]`
 
@@ -731,7 +744,7 @@ extra_fn_clean_exts:
     type: remove
 ```
 
-### extra_fn_clean_trim
+#### `extra_fn_clean_trim`
 
 **Type**: `List[str]`
 
@@ -745,7 +758,7 @@ extra_fn_clean_trim:
   - _processed
 ```
 
-### fn_clean_exts
+#### `fn_clean_exts`
 
 **Type**: `List[Union[str, CleanPattern]]`
 
@@ -924,7 +937,7 @@ fn_clean_exts:
     type: regex
 ```
 
-### fn_clean_trim
+#### `fn_clean_trim`
 
 **Type**: `List[str]`
 
@@ -972,13 +985,15 @@ fn_clean_trim:
   - _001
 ```
 
-### use_filename_as_sample_name
+#### `use_filename_as_sample_name`
 
 **Type**: `Union[bool, List[str]]` (default: `false`)
 
 Use the source filename as the sample name instead of any name parsed from the log. Set to true for all modules, or to a list of module IDs / patterns to apply selectively.
 
-### sample_names_ignore
+### Ignore samples
+
+#### `sample_names_ignore`
 
 **Type**: `List[str]`
 
@@ -992,7 +1007,7 @@ sample_names_ignore:
   - control_*
 ```
 
-### sample_names_ignore_re
+#### `sample_names_ignore_re`
 
 **Type**: `List[str]`
 
@@ -1006,7 +1021,7 @@ sample_names_ignore_re:
   - .*_neg_ctrl$
 ```
 
-### sample_names_only_include
+#### `sample_names_only_include`
 
 **Type**: `List[str]`
 
@@ -1020,7 +1035,7 @@ sample_names_only_include:
   - Sample_??
 ```
 
-### sample_names_only_include_re
+#### `sample_names_only_include_re`
 
 **Type**: `List[str]`
 
@@ -1033,7 +1048,9 @@ sample_names_only_include_re:
   - ^WGS_[0-9]+$
 ```
 
-### sample_names_rename
+### Rename and replace
+
+#### `sample_names_rename`
 
 **Type**: `List[List[str]]`
 
@@ -1051,7 +1068,7 @@ sample_names_rename:
     - Patient_C
 ```
 
-### sample_names_rename_buttons
+#### `sample_names_rename_buttons`
 
 **Type**: `List[str]`
 
@@ -1066,7 +1083,7 @@ sample_names_rename_buttons:
   - Lane
 ```
 
-### sample_names_replace
+#### `sample_names_replace`
 
 **Type**: `Dict[str, str]`
 
@@ -1080,19 +1097,19 @@ sample_names_replace:
   _001: ""
 ```
 
-### sample_names_replace_complete
+#### `sample_names_replace_complete`
 
 **Type**: `bool` (default: `false`)
 
 Replace the entire sample name when the key matches anywhere in it.
 
-### sample_names_replace_exact
+#### `sample_names_replace_exact`
 
 **Type**: `bool` (default: `false`)
 
 Only replace when the key matches the sample name exactly, not as a substring.
 
-### sample_names_replace_regex
+#### `sample_names_replace_regex`
 
 **Type**: `bool` (default: `false`)
 
@@ -1100,43 +1117,49 @@ Treat keys in sample_names_replace as regex patterns.
 
 ## File Discovery
 
-### file_list
+### Input source
+
+#### `file_list`
 
 **Type**: `bool` (default: `false`)
 
 Treat the input path as a file containing a list of paths to scan, one per line.
 
-### require_logs
+#### `require_logs`
 
 **Type**: `bool` (default: `false`)
 
 Fail with an error if any module explicitly requested with `--module` has no log files found. Off by default, so missing inputs are skipped silently.
 
-### log_filesize_limit
+### Size limits
+
+#### `log_filesize_limit`
 
 **Type**: `int` (default: `50000000`)
 
 Skip log files larger than this many bytes.
 
-### filesearch_lines_limit
+#### `filesearch_lines_limit`
 
 **Type**: `int` (default: `1000`)
 
 Stop reading a log file after this many lines.
 
-### ignore_symlinks
+### Skip patterns
+
+#### `ignore_symlinks`
 
 **Type**: `bool` (default: `false`)
 
 Skip symlinked files and directories during the file search.
 
-### ignore_images
+#### `ignore_images`
 
 **Type**: `bool` (default: `true`)
 
 Skip image files (PNG/JPEG/etc.) to avoid wasting time opening them.
 
-### fn_ignore_dirs
+#### `fn_ignore_dirs`
 
 **Type**: `List[str]` (default: `["multiqc_data",".git","icarus_viewers","runs_per_reference","not_aligned","contigs_reports"]`)
 
@@ -1151,7 +1174,7 @@ fn_ignore_dirs:
   - "*_logs"
 ```
 
-### fn_ignore_paths
+#### `fn_ignore_paths`
 
 **Type**: `List[str]` (default: `["*/work/??/??????????????????????????????","*/.snakemake","*/.singularity","*/__pycache__","*/site-packages/multiqc"]`)
 
@@ -1165,7 +1188,7 @@ fn_ignore_paths:
   - "*/.snakemake/*"
 ```
 
-### fn_ignore_files
+#### `fn_ignore_files`
 
 **Type**: `List[str]`
 
@@ -1210,7 +1233,7 @@ fn_ignore_files:
   - "*.tmp"
 ```
 
-### filesearch_file_shared
+#### `filesearch_file_shared`
 
 **Type**: `List[str]`
 
@@ -1218,49 +1241,53 @@ Module IDs whose log files may be matched by multiple modules during the search.
 
 ## Plot Settings
 
-### plots_force_flat
+### Rendering mode
+
+#### `plots_force_flat`
 
 **Type**: `bool` (default: `false`)
 
 Render plots as static images instead of interactive Plotly. Useful for very large reports.
 
-### plots_force_interactive
+#### `plots_force_interactive`
 
 **Type**: `bool` (default: `false`)
 
 Force interactive plots even when MultiQC would normally fall back to flat images.
 
-### plots_export_font_scale
-
-**Type**: `float` (default: `1.0`)
-
-Multiplier applied to font sizes in exported plot images. Bump up for publication-quality output.
-
-### plots_flat_numseries
+#### `plots_flat_numseries`
 
 **Type**: `int` (default: `2000`)
 
 If a plot has more than this many series, MultiQC switches it from interactive to flat image.
 
-### plots_defer_loading_numseries
+#### `plots_defer_loading_numseries`
 
 **Type**: `int` (default: `100`)
 
 Plots with more than this many series start collapsed. The user clicks a button to render them.
 
-### num_datasets_plot_limit
+#### `num_datasets_plot_limit`
 
 **Type**: `int` (default: `100`)
 
 Deprecated. Use `plots_defer_loading_numseries` instead.
 
-### plot_font_family
+### Appearance
+
+#### `plots_export_font_scale`
+
+**Type**: `float` (default: `1.0`)
+
+Multiplier applied to font sizes in exported plot images. Bump up for publication-quality output.
+
+#### `plot_font_family`
 
 **Type**: `str`
 
 CSS font-family for plot text. Defaults to a system font stack.
 
-### custom_plot_config
+#### `custom_plot_config`
 
 **Type**: `Dict[str, Any]`
 
@@ -1276,49 +1303,51 @@ custom_plot_config:
       title: Phred score
 ```
 
-### lineplot_number_of_points_to_hide_markers
+#### `lineplot_number_of_points_to_hide_markers`
 
 **Type**: `int` (default: `50`)
 
 Hide individual data point markers in line plots once the total point count across samples exceeds this.
 
-### barplot_legend_on_bottom
+#### `barplot_legend_on_bottom`
 
 **Type**: `bool` (default: `false`)
 
 Place bar plot legends below the plot instead of to the side. Not recommended.
 
-### boxplot_boxpoints
+### Boxplot and violin
+
+#### `boxplot_boxpoints`
 
 **Type**: `Literal["outliers", "suspectedoutliers", "all", False]` (default: `"outliers"`)
 
 How boxplot data points are drawn. Use false to hide individual points.
 
-### box_min_threshold_outliers
+#### `box_min_threshold_outliers`
 
 **Type**: `int` (default: `100`)
 
 When a boxplot has more samples than this, only outlier points are drawn.
 
-### box_min_threshold_no_points
+#### `box_min_threshold_no_points`
 
 **Type**: `int` (default: `1000`)
 
 When a boxplot has more samples than this, no individual points are drawn.
 
-### violin_downsample_after
+#### `violin_downsample_after`
 
 **Type**: `int` (default: `2000`)
 
 Start downsampling violin plot data once the sample count exceeds this. Keeps rendering snappy.
 
-### violin_min_threshold_outliers
+#### `violin_min_threshold_outliers`
 
 **Type**: `int` (default: `100`)
 
 When a violin plot has more samples than this, only outlier points are drawn.
 
-### violin_min_threshold_no_points
+#### `violin_min_threshold_no_points`
 
 **Type**: `int` (default: `1000`)
 
@@ -1326,7 +1355,9 @@ When a violin plot has more samples than this, no individual points are drawn.
 
 ## Toolbox
 
-### highlight_patterns
+### Highlighting
+
+#### `highlight_patterns`
 
 **Type**: `List[str]`
 
@@ -1340,7 +1371,7 @@ highlight_patterns:
   - treated
 ```
 
-### highlight_colors
+#### `highlight_colors`
 
 **Type**: `List[str]`
 
@@ -1354,13 +1385,15 @@ highlight_colors:
   - "#e41a1c"
 ```
 
-### highlight_regex
+#### `highlight_regex`
 
 **Type**: `bool` (default: `false`)
 
 Treat highlight_patterns as regex instead of plain substring.
 
-### show_hide_buttons
+### Show/hide buttons
+
+#### `show_hide_buttons`
 
 **Type**: `List[str]`
 
@@ -1374,7 +1407,7 @@ show_hide_buttons:
   - Normal samples
 ```
 
-### show_hide_patterns
+#### `show_hide_patterns`
 
 **Type**: `List[Union[str, List[str]]]`
 
@@ -1390,7 +1423,7 @@ show_hide_patterns:
     - _normal_
 ```
 
-### show_hide_mode
+#### `show_hide_mode`
 
 **Type**: `List[str]`
 
@@ -1404,7 +1437,7 @@ show_hide_mode:
   - show
 ```
 
-### show_hide_regex
+#### `show_hide_regex`
 
 **Type**: `List[Union[str, bool]]`
 
@@ -1420,29 +1453,31 @@ show_hide_regex:
 
 ## Table Settings
 
-### collapse_tables
+### General
+
+#### `collapse_tables`
 
 **Type**: `bool` (default: `true`)
 
 Collapse module tables by default. Users click to expand.
 
-### max_table_rows
+#### `max_table_rows`
 
 **Type**: `int` (default: `500`)
 
 Tables larger than this many rows are rendered as a violin plot instead.
 
-### max_configurable_table_columns
+#### `max_configurable_table_columns`
 
 **Type**: `int` (default: `200`)
 
 Cap on the number of columns the user can toggle in the table-configure toolbox.
 
-### decimalPoint_format
+#### `decimalPoint_format`
 
-**Type**: `str`
+**Type**: `str` (default: `"."`)
 
-Decimal-point character used in formatted numbers, eg. `.` (default) or `,`.
+Decimal-point character used in formatted numbers. Defaults to `.`
 
 **Example**:
 
@@ -1450,23 +1485,21 @@ Decimal-point character used in formatted numbers, eg. `.` (default) or `,`.
 decimalPoint_format: ","
 ```
 
-### thousandsSep_format
+#### `thousandsSep_format`
 
-**Type**: `str`
+**Type**: `str` (default: `" "`)
 
-Thousands separator used in formatted numbers, eg. `,` (default), ` ` (space), or `.`
+Thousands separator used in formatted numbers. Defaults to a single space, which is rendered as a small non-breaking space.
 
-**Examples**:
-
-```yaml
-thousandsSep_format: " "
-```
+**Example**:
 
 ```yaml
-thousandsSep_format: "'"
+thousandsSep_format: ","
 ```
 
-### general_stats_columns
+### General Stats table
+
+#### `general_stats_columns`
 
 **Type**: `Dict[str, GeneralStatsModuleConfig]`
 
@@ -1486,19 +1519,21 @@ general_stats_columns:
         title: "% Dups"
 ```
 
-### general_stats_helptext
+#### `general_stats_helptext`
 
 **Type**: `str`
 
 Help text shown under the General Statistics heading at the top of the report.
 
-### skip_generalstats
+#### `skip_generalstats`
 
 **Type**: `bool` (default: `false`)
 
 Hide the General Statistics table at the top of the report.
 
-### table_columns_name
+### Column overrides
+
+#### `table_columns_name`
 
 **Type**: `Dict[str, Union[str, Dict[str, str]]]`
 
@@ -1513,7 +1548,7 @@ table_columns_name:
     percent_gc: "% GC"
 ```
 
-### table_columns_placement
+#### `table_columns_placement`
 
 **Type**: `Dict[str, Dict[str, float]]`
 
@@ -1529,7 +1564,7 @@ table_columns_placement:
     total_sequences: 700
 ```
 
-### table_columns_visible
+#### `table_columns_visible`
 
 **Type**: `Dict[str, Union[bool, Dict[str, bool]]]`
 
@@ -1545,7 +1580,26 @@ table_columns_visible:
     raw_total_sequences: true
 ```
 
-### table_cond_formatting_rules
+#### `custom_table_header_config`
+
+**Type**: `Dict[str, Any]`
+
+Override table column config. Same shape as custom_plot_config but for table headers.
+
+**Example**:
+
+```yaml
+custom_table_header_config:
+  general_stats_table:
+    "% Dups":
+      format: "{:,.1f}%"
+      max: 100
+      min: 0
+```
+
+### Conditional formatting
+
+#### `table_cond_formatting_rules`
 
 **Type**: `Dict[str, Dict[str, List[Dict[str, Union[str, int, float]]]]]`
 
@@ -1599,7 +1653,7 @@ table_cond_formatting_rules:
       - gt: 20
 ```
 
-### table_cond_formatting_colours
+#### `table_cond_formatting_colours`
 
 **Type**: `List[Dict[str, str]]`
 
@@ -1628,24 +1682,9 @@ table_cond_formatting_colours:
   - fail: "#d9534f"
 ```
 
-### custom_table_header_config
+### Row merging
 
-**Type**: `Dict[str, Any]`
-
-Override table column config. Same shape as custom_plot_config but for table headers.
-
-**Example**:
-
-```yaml
-custom_table_header_config:
-  general_stats_table:
-    "% Dups":
-      format: "{:,.1f}%"
-      max: 100
-      min: 0
-```
-
-### table_sample_merge
+#### `table_sample_merge`
 
 **Type**: `Dict[str, Union[str, Dict[str, Union[str, List[str]]], List[Union[str, Dict[str, Union[str, List[str]]]]]]]`
 
@@ -1673,7 +1712,7 @@ table_sample_merge:
 
 ## Software Versions
 
-### software_versions
+### `software_versions`
 
 **Type**: `Dict[str, Any]`
 
@@ -1688,19 +1727,19 @@ software_versions:
   samtools: "1.20"
 ```
 
-### versions_table_group_header
+### `versions_table_group_header`
 
 **Type**: `str` (default: `"Group"`)
 
 Column header for the grouping column in the Software Versions table. Defaults to 'Group'.
 
-### disable_version_detection
+### `disable_version_detection`
 
 **Type**: `bool` (default: `false`)
 
 Skip parsing software versions from module log files.
 
-### skip_versions_section
+### `skip_versions_section`
 
 **Type**: `bool` (default: `false`)
 
@@ -1708,39 +1747,33 @@ Hide the Software Versions section.
 
 ## Read & Base Counts
 
-### read_count_multiplier
+### Short reads
+
+#### `read_count_multiplier`
 
 **Type**: `float` (default: `1e-06`)
 
 Multiplier applied to read counts before display. Default 0.000001 shows reads in millions.
 
-**Examples**:
+**Example**:
 
 ```yaml
 read_count_multiplier: 0.001
 ```
 
-```yaml
-read_count_multiplier: 1
-```
-
-### read_count_prefix
+#### `read_count_prefix`
 
 **Type**: `str` (default: `"M"`)
 
 Suffix shown after formatted read counts, eg. 'M' for millions.
 
-**Examples**:
+**Example**:
 
 ```yaml
 read_count_prefix: K
 ```
 
-```yaml
-read_count_prefix: ""
-```
-
-### read_count_desc
+#### `read_count_desc`
 
 **Type**: `str` (default: `"millions"`)
 
@@ -1756,97 +1789,77 @@ read_count_desc: thousands
 read_count_desc: raw reads
 ```
 
-### long_read_count_multiplier
+### Long reads
+
+#### `long_read_count_multiplier`
 
 **Type**: `float` (default: `0.001`)
 
 Multiplier for long-read counts. Default 0.001 shows counts in thousands.
 
-**Examples**:
+**Example**:
 
 ```yaml
 long_read_count_multiplier: 1.0e-06
 ```
 
-```yaml
-long_read_count_multiplier: 1
-```
-
-### long_read_count_prefix
+#### `long_read_count_prefix`
 
 **Type**: `str` (default: `"K"`)
 
 Suffix shown after formatted long-read counts, eg. 'K' for thousands.
 
-**Examples**:
+**Example**:
 
 ```yaml
 long_read_count_prefix: M
 ```
 
-```yaml
-long_read_count_prefix: ""
-```
-
-### long_read_count_desc
+#### `long_read_count_desc`
 
 **Type**: `str` (default: `"thousands"`)
 
 Word used in labels for long-read counts, eg. 'thousands'.
 
-**Examples**:
+**Example**:
 
 ```yaml
 long_read_count_desc: millions
 ```
 
-```yaml
-long_read_count_desc: reads
-```
+### Bases
 
-### base_count_multiplier
+#### `base_count_multiplier`
 
 **Type**: `float` (default: `1e-06`)
 
-Multiplier for base counts. Default 0.000000001 shows bases in gigabases.
+Multiplier for base counts. Default 0.000001 shows bases in megabases.
 
-**Examples**:
-
-```yaml
-base_count_multiplier: 1.0e-06
-```
+**Example**:
 
 ```yaml
 base_count_multiplier: 0.001
 ```
 
-### base_count_prefix
+#### `base_count_prefix`
 
 **Type**: `str` (default: `"Mb"`)
 
-Suffix shown after formatted base counts, eg. 'Gb' for gigabases.
+Suffix shown after formatted base counts, eg. 'Mb' for megabases.
 
-**Examples**:
-
-```yaml
-base_count_prefix: Mb
-```
+**Example**:
 
 ```yaml
 base_count_prefix: Kb
 ```
 
-### base_count_desc
+#### `base_count_desc`
 
 **Type**: `str` (default: `"millions"`)
 
-Word used in labels for base counts, eg. 'gigabases'.
+Word used in labels for base counts, eg. 'megabases'.
 
-**Examples**:
-
-```yaml
-base_count_desc: megabases
-```
+**Example**:
 
 ```yaml
 base_count_desc: kilobases
@@ -1854,25 +1867,70 @@ base_count_desc: kilobases
 
 ## AI Summary
 
-### ai_summary
+### On/off
+
+#### `ai_summary`
 
 **Type**: `bool` (default: `false`)
 
 Generate a short AI-written summary at the top of the report.
 
-### ai_summary_full
+#### `ai_summary_full`
 
 **Type**: `bool` (default: `false`)
 
 Also generate a longer per-section AI summary. Requires ai_summary to be on.
 
-### ai_provider
+#### `no_ai`
+
+**Type**: `bool` (default: `false`)
+
+Disable AI summaries entirely. Overrides ai_summary and ai_summary_full.
+
+### Prompts
+
+#### `ai_prompt_short`
+
+**Type**: `str`
+
+Custom prompt prepended to the short AI summary request. Use to steer tone, length, or focus.
+
+**Example**:
+
+```yaml
+ai_prompt_short: Write the summary in one short paragraph aimed at a lab head, no
+  jargon.
+```
+
+#### `ai_prompt_full`
+
+**Type**: `str`
+
+Custom prompt prepended to the full-section AI summary request.
+
+**Example**:
+
+```yaml
+ai_prompt_full: Use bullet points and call out any sample that looks like an outlier.
+```
+
+### Privacy
+
+#### `ai_anonymize_samples`
+
+**Type**: `bool` (default: `false`)
+
+Replace sample names with placeholders before sending data to the AI provider.
+
+### Provider
+
+#### `ai_provider`
 
 **Type**: `Literal["seqera", "openai", "anthropic", "aws_bedrock", "custom"]` (default: `"seqera"`)
 
 AI provider used for summaries. One of seqera, openai, anthropic, aws_bedrock, custom.
 
-### ai_model
+#### `ai_model`
 
 **Type**: `str`
 
@@ -1888,7 +1946,7 @@ ai_model: gpt-4o
 ai_model: claude-sonnet-4-5.
 ```
 
-### ai_custom_endpoint
+#### `ai_custom_endpoint`
 
 **Type**: `str`
 
@@ -1904,19 +1962,33 @@ ai_custom_endpoint: http://localhost:11434/v1
 ai_custom_endpoint: https://api.example.com/v1
 ```
 
-### ai_auth_type
+#### `ai_auth_type`
 
 **Type**: `Literal["bearer", "api-key"]`
 
 Authentication scheme used by the custom endpoint. 'bearer' sends an Authorization header, 'api-key' sends an api-key header.
 
-### ai_retries
+#### `seqera_website`
+
+**Type**: `str` (default: `"https://seqera.io"`)
+
+Base URL used for Seqera Platform links in the report.
+
+#### `seqera_api_url`
+
+**Type**: `str` (default: `"https://intern.seqera.io"`)
+
+Base URL for the Seqera Platform API. Defaults to the public instance.
+
+### Tuning
+
+#### `ai_retries`
 
 **Type**: `int` (default: `3`)
 
 Number of times to retry an AI request on transient errors.
 
-### ai_extra_query_options
+#### `ai_extra_query_options`
 
 **Type**: `Dict[str, Any]`
 
@@ -1930,186 +2002,145 @@ ai_extra_query_options:
   top_p: 0.9
 ```
 
-### ai_custom_context_window
+#### `ai_custom_context_window`
 
 **Type**: `int`
 
 Override the model's context window in tokens. Set this if MultiQC's default for your model is wrong.
 
-### ai_max_completion_tokens
+#### `ai_max_completion_tokens`
 
 **Type**: `int`
 
 Maximum completion tokens for OpenAI reasoning models.
 
-### ai_reasoning_effort
+#### `ai_reasoning_effort`
 
 **Type**: `Literal["low", "medium", "high"]`
 
 Reasoning effort for OpenAI reasoning models.
 
-### ai_extended_thinking
+#### `ai_extended_thinking`
 
 **Type**: `bool` (default: `false`)
 
 Enable extended thinking on Anthropic Claude models that support it.
 
-### ai_thinking_budget_tokens
+#### `ai_thinking_budget_tokens`
 
 **Type**: `int`
 
 Token budget for Anthropic extended thinking when enabled.
 
-### ai_prompt_short
+## MegaQC
 
-**Type**: `str`
-
-Custom prompt prepended to the short AI summary request. Use to steer tone, length, or focus.
-
-**Example**:
-
-```yaml
-ai_prompt_short: Write the summary in one short paragraph aimed at a lab head, no
-  jargon.
-```
-
-### ai_prompt_full
-
-**Type**: `str`
-
-Custom prompt prepended to the full-section AI summary request.
-
-**Example**:
-
-```yaml
-ai_prompt_full: Use bullet points and call out any sample that looks like an outlier.
-```
-
-### no_ai
-
-**Type**: `bool` (default: `false`)
-
-Disable AI summaries entirely. Overrides ai_summary and ai_summary_full.
-
-### ai_anonymize_samples
-
-**Type**: `bool` (default: `false`)
-
-Replace sample names with placeholders before sending data to the AI provider.
-
-## MegaQC Integration
-
-### megaqc_url
+### `megaqc_url`
 
 **Type**: `str`
 
 URL of a MegaQC instance to upload report data to after generation.
 
-### megaqc_access_token
+### `megaqc_access_token`
 
 **Type**: `str`
 
 Auth token for the MegaQC instance.
 
-### megaqc_timeout
+### `megaqc_timeout`
 
 **Type**: `int` (default: `30`)
 
 Upload timeout in seconds when posting to MegaQC.
 
-### megaqc_upload
+### `megaqc_upload`
 
 **Type**: `bool`
 
 Upload report data to MegaQC after generation. Requires megaqc_url and megaqc_access_token.
 
-## Seqera Integration
-
-### seqera_website
-
-**Type**: `str` (default: `"https://seqera.io"`)
-
-Base URL used for Seqera Platform links in the report.
-
-### seqera_api_url
-
-**Type**: `str` (default: `"https://intern.seqera.io"`)
-
-Base URL for the Seqera Platform API. Defaults to the public instance.
-
 ## Performance & Debugging
 
-### profile_runtime
+### Profiling
+
+#### `profile_runtime`
 
 **Type**: `bool` (default: `false`)
 
 Time each module and include the breakdown in the report.
 
-### profile_memory
+#### `profile_memory`
 
 **Type**: `bool` (default: `false`)
 
 Track peak memory per module. Adds runtime overhead.
 
-### verbose
+### Logging
+
+#### `verbose`
 
 **Type**: `bool` (default: `false`)
 
 Print extra debug log messages to the terminal.
 
-### no_ansi
+#### `no_ansi`
 
 **Type**: `bool` (default: `false`)
 
 Disable ANSI colour codes in terminal output.
 
-### quiet
+#### `quiet`
 
 **Type**: `bool` (default: `false`)
 
 Suppress non-essential log messages.
 
-### lint
+### Linting
 
-**Type**: `bool` (default: `false`)
-
-Deprecated. Run module linting and fail the build on issues. Used in MultiQC's own tests, rarely useful otherwise.
-
-### strict
+#### `strict`
 
 **Type**: `bool` (default: `false`)
 
 Treat module warnings as errors. Stricter than lint.
 
-### development
+#### `lint`
 
 **Type**: `bool` (default: `false`)
 
-Enable developer-mode features such as live JS reloading. Internal use.
+Deprecated. Run module linting and fail the build on issues. Used in MultiQC's own tests, rarely useful otherwise.
 
-### report_readerrors
+### Developer
+
+#### `development`
+
+**Type**: `bool` (default: `false`)
+
+Enable developer-mode features such as live JS reloading. For internal use.
+
+#### `report_readerrors`
 
 **Type**: `bool` (default: `false`)
 
 Surface file read errors in the log instead of silently skipping them.
 
-### no_version_check
+#### `preserve_module_raw_data`
+
+**Type**: `bool` (default: `false`)
+
+Keep each module's raw parsed data in memory after report generation. Used by Python API consumers.
+
+### Version check
+
+#### `no_version_check`
 
 **Type**: `bool` (default: `false`)
 
 Skip the network check for newer MultiQC versions on startup.
 
-### version_check_url
+#### `version_check_url`
 
 **Type**: `str` (default: `"https://api.multiqc.info/version"`)
 
 URL queried by MultiQC's own update check. Set to override the default endpoint.
-
-### preserve_module_raw_data
-
-**Type**: `bool` (default: `false`)
-
-Keep each module's raw parsed data in memory after report generation. Used by Python API consumers.
 
 ## Special Types
 

@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import AbstractSet, Any, Dict, List, Set, Tuple
+from typing import AbstractSet, Any, Dict, List, Optional, Tuple
 
 import yaml
 
@@ -34,16 +34,20 @@ def load_schema_and_defaults() -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str
     return schema.get("properties", {}), defaults, schema
 
 
-def load_sections(properties: Dict[str, Any], skip: AbstractSet[str] = frozenset()) -> Dict[str, List[str]]:
-    """Group property names by their ``section`` tag, preserving source order.
+def load_sections_with_groups(
+    properties: Dict[str, Any],
+    skip: AbstractSet[str] = frozenset(),
+) -> Dict[str, Dict[Optional[str], List[str]]]:
+    """Group property names by ``section`` then by ``group``, preserving source order.
 
-    Sections appear in the order they first occur in ``properties`` (which
-    matches the source order of ``with section(...)`` blocks in
-    ``MultiQCConfig``). Within each section, field order also matches source
-    order. Fails loudly if any property is missing a section tag and is not in
-    ``skip``, so a new field can't be silently dropped from the docs/wizard.
+    Returns a dict keyed by section name, where each value is a dict keyed by
+    group name (or ``None`` for ungrouped fields). Sections, groups within a
+    section, and fields within a group all appear in source order. Group
+    members must be contiguous in source order; non-contiguous groups produce
+    duplicate headings in the generated docs and wizard. Fails loudly on any
+    property missing a ``section`` tag that is not in ``skip``.
     """
-    sections: Dict[str, List[str]] = {}
+    out: Dict[str, Dict[Optional[str], List[str]]] = {}
     untagged: List[str] = []
     for prop_name, prop in properties.items():
         if prop_name in skip:
@@ -52,16 +56,13 @@ def load_sections(properties: Dict[str, Any], skip: AbstractSet[str] = frozenset
         if section is None:
             untagged.append(prop_name)
             continue
-        sections.setdefault(section, []).append(prop_name)
+        group = prop.get("group")
+        section_buckets = out.setdefault(section, {})
+        section_buckets.setdefault(group, []).append(prop_name)
     if untagged:
         raise RuntimeError(
             f"{len(untagged)} schema property/properties have no 'section' tag: {sorted(untagged)}.\n"
             f'Wrap each Field with cfg(..., section="...") in multiqc/utils/config_schema.py, '
             f"or add to the loader caller's skip set."
         )
-    return sections
-
-
-def load_uncommon(properties: Dict[str, Any]) -> Set[str]:
-    """Set of property names flagged ``advanced=True`` in their cfg() call."""
-    return {name for name, prop in properties.items() if prop.get("advanced")}
+    return out

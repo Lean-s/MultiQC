@@ -53,7 +53,7 @@ def _dump_yaml(value):
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from _config_schema_loader import load_schema_and_defaults, load_sections  # noqa: E402
+from _config_schema_loader import load_schema_and_defaults, load_sections_with_groups  # noqa: E402
 from multiqc.utils.config_schema import (  # noqa: E402
     AiProviderLiteral,
     CleanPattern,
@@ -219,64 +219,82 @@ Configuration values are loaded in the following order of precedence (highest to
 
 The options below can be specified in your YAML configuration files.
 For boolean options, use `true` or `false` (all lowercase) in your YAML files.
+
+:::tip
+
+If you'd rather build your config visually, the [Config Wizard](https://seqera.io/multiqc_config_wizard) renders every option below as a form field with the same descriptions and defaults, and validates as you type.
+
+:::
 """)
 
-    # Group properties into logical sections from the schema's per-field tags.
-    sections = load_sections(properties, skip=SKIP_PROPERTIES)
+    def render_prop(prop_name: str, heading_level: int) -> None:
+        """Append rendered markdown for one property to ``output``."""
+        if prop_name not in properties:
+            return
+        prop = properties[prop_name]
 
-    # Generate markdown for each section
-    for section, props in sections.items():
-        if not props:
+        # Get type information from Pydantic model if available
+        if prop_name in config_attrs:
+            type_info = format_type_annotation(config_attrs[prop_name])
+        else:
+            # Fallback to JSON schema type
+            type_info = prop.get("type", "any")
+            if type_info == "array":
+                items = prop.get("items", {})
+                item_type = items.get("type", "any")
+                if "oneOf" in items:
+                    item_types = [t.get("type", "any") for t in items.get("oneOf", [])]
+                    item_type = " | ".join(item_types)
+                type_info = f"List[{item_type}]"
+            elif not type_info:
+                type_info = "any"
+
+        description = prop.get("description", "")
+
+        # Get default value - first from config_defaults.yaml, then fall back to schema
+        if prop_name in config_defaults:
+            default_val = config_defaults[prop_name]
+        else:
+            default_val = prop.get("default")
+        default_inline, default_block = render_default(default_val)
+
+        hashes = "#" * heading_level
+        output.append(f"{hashes} `{prop_name}`\n")
+        output.append(f"**Type**: `{type_info}`{default_inline}\n")
+        output.append(f"{description}\n")
+        if default_block:
+            output.append(default_block)
+
+        examples = prop.get("examples") or []
+        if examples:
+            label = "Example" if len(examples) == 1 else "Examples"
+            output.append(f"**{label}**:\n")
+            for ex in examples:
+                yaml_text = _dump_yaml({prop_name: ex}).rstrip()
+                output.append(f"```yaml\n{yaml_text}\n```\n")
+
+    # Group properties into sections and sub-groups using the schema's
+    # per-field tags. When a section has only one group, the group heading
+    # is redundant under the section heading, so render the fields directly
+    # under `## section` as `### prop_name`. Otherwise, emit `### group`
+    # headings and demote fields to `#### prop_name`.
+    sections_with_groups = load_sections_with_groups(properties, skip=SKIP_PROPERTIES)
+
+    for section, groups in sections_with_groups.items():
+        if not groups:
             continue
-
         output.append(f"## {section}\n")
-
-        for prop_name in props:
-            if prop_name in properties:
-                prop = properties[prop_name]
-
-                # Get type information from Pydantic model if available
-                if prop_name in config_attrs:
-                    type_info = format_type_annotation(config_attrs[prop_name])
-                else:
-                    # Fallback to JSON schema type
-                    type_info = prop.get("type", "any")
-                    if type_info == "array":
-                        items = prop.get("items", {})
-                        item_type = items.get("type", "any")
-                        if "oneOf" in items:
-                            item_types = [t.get("type", "any") for t in items.get("oneOf", [])]
-                            item_type = " | ".join(item_types)
-                        type_info = f"List[{item_type}]"
-                    elif not type_info:
-                        type_info = "any"
-
-                # Get description
-                description = prop.get("description", "")
-
-                # Get default value - first from config_defaults.yaml, then fall back to schema
-                if prop_name in config_defaults:
-                    default_val = config_defaults[prop_name]
-                else:
-                    default_val = prop.get("default")
-                default_inline, default_block = render_default(default_val)
-
-                # Format the markdown
-                output.append(f"### {prop_name}\n")
-                output.append(f"**Type**: `{type_info}`{default_inline}\n")
-                output.append(f"{description}\n")
-                if default_block:
-                    output.append(default_block)
-
-                # Render examples as YAML code blocks
-                examples = prop.get("examples") or []
-                if examples:
-                    label = "Example" if len(examples) == 1 else "Examples"
-                    output.append(f"**{label}**:\n")
-                    for ex in examples:
-                        yaml_text = _dump_yaml({prop_name: ex}).rstrip()
-                        output.append(f"```yaml\n{yaml_text}\n```\n")
-
+        named_groups = [(g, names) for g, names in groups.items() if g is not None]
+        single_group = len(named_groups) == 1 and not groups.get(None)
+        ungrouped = groups.get(None, [])
+        for prop_name in ungrouped:
+            render_prop(prop_name, heading_level=3)
+        for group_name, names in named_groups:
+            if not single_group:
+                output.append(f"### {group_name}\n")
+            prop_level = 3 if single_group else 4
+            for prop_name in names:
+                render_prop(prop_name, heading_level=prop_level)
         output.append("")  # Add blank line between sections
 
     # Describe special types
