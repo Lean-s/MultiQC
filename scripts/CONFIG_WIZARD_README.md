@@ -4,7 +4,7 @@ End-user documentation lives at [`docs/markdown/getting_started/config_wizard.md
 
 ## Files
 
-- `multiqc/utils/config_schema.py` — Pydantic `MultiQCConfig` model. Source of truth for descriptions, types, defaults, examples, `Literal` enums, and per-field `section` / `uncommon` tags.
+- `multiqc/utils/config_schema.py` — Pydantic `MultiQCConfig` model. Source of truth for descriptions, types, defaults, examples, `Literal` enums, and per-field `section` / `group` / `multiline` tags.
 - `scripts/generate_config_wizard.py` — reads the schema and `multiqc/config_defaults.yaml`, classifies each field into a section, and substitutes the data into the template.
 - `scripts/wizard_template.html` — the single-file HTML/CSS/JS template with `__MULTIQC_LOGO_SVG__`, `__CONFIG_DATA_JSON__`, `__CONFIG_SCHEMA_JSON__`, `__MULTIQC_VERSION__`, and `__GENERATED_ON__` placeholders.
 - `scripts/_config_schema_loader.py` — shared loader used by both the wizard and `generate_config_docs.py`.
@@ -44,7 +44,7 @@ Any tool that can take a 1200×630 viewport screenshot of a local HTML file work
 
 ## Adding a new config option
 
-1. Add the field to `MultiQCConfig` in `multiqc/utils/config_schema.py` with `cfg(..., section="...", description=..., examples=[...])`. Use a `Literal[...]` (or `List[Literal[...]]`) when the value is restricted. Pass `uncommon=True` for fields that should hide behind the advanced toggle.
+1. Add the field to `MultiQCConfig` in `multiqc/utils/config_schema.py` inside the appropriate `with section(...)` / `with group(...)` blocks, using `cfg(description=..., examples=[...])`. Use a `Literal[...]` (or `List[Literal[...]]`) when the value is restricted. Pass `multiline=True` for prose fields that should render as a textarea.
 2. Add a default in `multiqc/config_defaults.yaml` if appropriate, and mirror the annotation in `multiqc/config.py`.
 3. Regenerate the artifacts:
 
