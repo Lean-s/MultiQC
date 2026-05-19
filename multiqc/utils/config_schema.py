@@ -5,13 +5,16 @@ Generated from the config defaults and type hints.
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+from functools import lru_cache
 from typing import Any, Dict, Iterator, List, Literal, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class SearchPattern(BaseModel):
     """Search pattern configuration for finding tool outputs"""
+
+    model_config = ConfigDict(extra="forbid")
 
     fn: Optional[str] = Field(None, description="Filename pattern to match")
     fn_re: Optional[str] = Field(None, description="Filename regex pattern to match")
@@ -34,11 +37,91 @@ class SearchPattern(BaseModel):
 class CleanPattern(BaseModel):
     """Pattern for cleaning sample names"""
 
+    model_config = ConfigDict(extra="forbid")
+
     type: Literal["truncate", "remove", "regex", "regex_keep"] = Field(
         "truncate", description="Type of pattern matching to use"
     )
     pattern: str = Field(..., description="Pattern to match")
     module: Optional[Union[str, List[str]]] = Field(None, description="Module(s) to apply this pattern to")
+
+
+class CondFormattingRule(BaseModel):
+    """One conditional-formatting comparison for a table cell.
+
+    A rule is a dict with exactly one operator key and its comparison value.
+    Evaluated in ``multiqc/plots/table_object.py``. String operators are
+    case-insensitive substring/equality checks; numeric operators cast both
+    sides via ``float()`` and silently skip on a parse error.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    s_eq: Optional[str] = Field(None, description="Case-insensitive string equality")
+    s_ne: Optional[str] = Field(None, description="Case-insensitive string inequality")
+    s_contains: Optional[str] = Field(None, description="Case-insensitive substring match")
+    eq: Optional[Union[float, int]] = Field(None, description="Numeric equality")
+    ne: Optional[Union[float, int]] = Field(None, description="Numeric inequality")
+    gt: Optional[Union[float, int]] = Field(None, description="Strictly greater than")
+    lt: Optional[Union[float, int]] = Field(None, description="Strictly less than")
+    ge: Optional[Union[float, int]] = Field(None, description="Greater than or equal to")
+    le: Optional[Union[float, int]] = Field(None, description="Less than or equal to")
+
+    @model_validator(mode="after")
+    def _require_at_least_one_operator(self) -> "CondFormattingRule":
+        ops = tuple(type(self).model_fields)
+        if not any(getattr(self, op) is not None for op in ops):
+            raise ValueError(f"Conditional-formatting rule needs at least one operator (one of: {', '.join(ops)}).")
+        return self
+
+
+class ModuleOverride(BaseModel):
+    """Per-module override values used inside ``module_order`` / ``top_modules`` entries.
+
+    The keys are exactly those read off ``self.mod_cust_config`` in
+    ``multiqc/base_module.py``: name, anchor, info, comment, extra, href, doi,
+    path_filters, path_filters_exclude, generalstats, custom_config. Nothing
+    else is consumed (no iteration over the dict, no splat, no plugin hook),
+    so ``extra="forbid"`` is safe and surfaces typos like ``path_filter``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: Optional[str] = Field(None, description="Display name for this module run")
+    anchor: Optional[str] = Field(None, description="HTML/section anchor for this module run")
+    info: Optional[str] = Field(None, description="Intro text rendered as markdown under the section heading")
+    comment: Optional[str] = Field(None, description="Comment text rendered as markdown under the heading")
+    extra: Optional[str] = Field(None, description="Extra HTML appended after the intro")
+    href: Optional[Union[str, List[str]]] = Field(None, description="Tool homepage URL, or list of URLs")
+    doi: Optional[Union[str, List[str]]] = Field(None, description="DOI or list of DOIs")
+    path_filters: Optional[Union[str, List[str]]] = Field(
+        None, description="Glob patterns restricting which files this module run sees"
+    )
+    path_filters_exclude: Optional[Union[str, List[str]]] = Field(
+        None, description="Glob patterns excluding files from this module run"
+    )
+    generalstats: Optional[bool] = Field(
+        None, description="Set to false to suppress this module's general-stats columns"
+    )
+    custom_config: Optional[Dict[str, Any]] = Field(
+        None, description="Module-specific config values merged into config.<module_id>"
+    )
+
+
+class SectionOrderOverride(BaseModel):
+    """Override dict accepted as a ``report_section_order`` value.
+
+    All three keys are independent and may be combined. ``order`` is an integer
+    (default scheme starts at 10, increments by 10; lower numbers float to the
+    bottom). ``before`` / ``after`` reference another section/module/anchor ID
+    by string. Unknown IDs are silently skipped at runtime.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    order: Optional[int] = Field(None, description="Explicit numeric order")
+    before: Optional[str] = Field(None, description="Section/module/anchor ID to position this entry before")
+    after: Optional[str] = Field(None, description="Section/module/anchor ID to position this entry after")
 
 
 class GeneralStatsColumnConfig(BaseModel):
@@ -60,6 +143,8 @@ class GeneralStatsColumnConfig(BaseModel):
 
 class GeneralStatsModuleConfig(BaseModel):
     """Configuration for a module's general stats columns"""
+
+    model_config = ConfigDict(extra="forbid")
 
     columns: Dict[str, GeneralStatsColumnConfig] = Field(
         default_factory=dict, description="Columns to show in general stats table. Keys are column IDs."
@@ -263,14 +348,14 @@ class MultiQCConfig(BaseModel):
                 "splitting the metadata and the data across two top-level keys.",
             )
         with group("Module ordering"):
-            top_modules: Optional[List[Union[str, Dict[str, Dict[str, Any]]]]] = cfg(
+            top_modules: Optional[List[Union[str, Dict[str, ModuleOverride]]]] = cfg(
                 (
                     "Module IDs to render before module_order. Useful for pinning a module to the top "
                     "regardless of where it appears in module_order. Same shape as module_order entries."
                 ),
                 examples=[["fastqc", "cutadapt"]],
             )
-            module_order: Optional[List[Union[str, Dict[str, Dict[str, Any]]]]] = cfg(
+            module_order: Optional[List[Union[str, Dict[str, ModuleOverride]]]] = cfg(
                 (
                     "Order in which modules appear in the report. Each entry is either a module ID, "
                     "or a single-key dict mapping the ID to per-run overrides (eg. name, anchor, info, "
@@ -297,10 +382,13 @@ class MultiQCConfig(BaseModel):
                 "Module sections to hide. Use the section anchor as it appears in the URL.",
                 examples=[["fastqc_overrepresented_sequences", "gatk-compare-overlap"]],
             )
-            report_section_order: Optional[Dict[str, Any]] = cfg(
+            report_section_order: Optional[Dict[str, Union[Literal["remove"], SectionOrderOverride]]] = cfg(
                 (
-                    "Reorder, group or hide report sections by ID. Values can be a position string ('before'/'after'), "
-                    "an explicit order number, or a dict of overrides. See the [customisation docs](https://docs.seqera.io/multiqc/reports/customisation#order-of-module-and-module-subsection-output) for the full grammar."
+                    "Reorder, group or hide report sections by ID. Values are either the literal "
+                    "string 'remove' (drops the section) or a dict with any combination of "
+                    "`order` (int), `before` (str) and `after` (str). See the "
+                    "[customisation docs](https://docs.seqera.io/multiqc/reports/customisation#order-of-module-and-module-subsection-output) "
+                    "for the full grammar."
                 ),
                 examples=[{"fastqc": {"order": -10}, "custom_content-my-section": {"before": "fastqc"}}],
             )
@@ -365,7 +453,7 @@ class MultiQCConfig(BaseModel):
             export_plot_formats: Optional[List[Literal["png", "svg", "pdf"]]] = cfg(
                 "Image formats to export when export_plots is on.",
             )
-            export_plots_timeout: Optional[int] = cfg("Timeout for exporting each plot, in seconds.")
+            export_plots_timeout: Optional[int] = cfg("Timeout for exporting each plot, in seconds.", gt=0)
             plots_dir_name: Optional[str] = cfg(
                 "Directory for exported plot images when export_plots is on. Defaults to multiqc_plots.",
             )
@@ -435,7 +523,10 @@ class MultiQCConfig(BaseModel):
             )
         with group("Rename and replace"):
             sample_names_rename: Optional[List[List[str]]] = cfg(
-                "Toolbox rename pairs. Each entry is a [from, to] pair, grouped by the buttons in sample_names_rename_buttons.",
+                "Toolbox rename rows. Each entry is a list where the first element is the source "
+                "sample name and each subsequent element is the rename for the corresponding "
+                "button in `sample_names_rename_buttons` (so inner lists should have "
+                "`1 + len(sample_names_rename_buttons)` elements).",
                 examples=[
                     [
                         ["SMP001", "Patient_A"],
@@ -474,8 +565,8 @@ class MultiQCConfig(BaseModel):
                 ),
             )
         with group("Size limits"):
-            log_filesize_limit: Optional[int] = cfg("Skip log files larger than this many bytes.")
-            filesearch_lines_limit: Optional[int] = cfg("Stop reading a log file after this many lines.")
+            log_filesize_limit: Optional[int] = cfg("Skip log files larger than this many bytes.", gt=0)
+            filesearch_lines_limit: Optional[int] = cfg("Stop reading a log file after this many lines.", gt=0)
         with group("Skip patterns"):
             ignore_symlinks: Optional[bool] = cfg(
                 "Skip symlinked files and directories during the file search.",
@@ -498,6 +589,20 @@ class MultiQCConfig(BaseModel):
             filesearch_file_shared: Optional[List[str]] = cfg(
                 "Module IDs whose log files may be matched by multiple modules during the search.",
             )
+        with group("Search patterns"):
+            sp: Optional[Dict[str, Union[SearchPattern, List[SearchPattern]]]] = cfg(
+                (
+                    "Override or add to the built-in module search patterns. Top-level keys are "
+                    "module IDs (eg. `fastqc`); values are a single `SearchPattern` dict or a list "
+                    "of them. See the SearchPattern definition below for the accepted fields."
+                ),
+                examples=[
+                    {
+                        "fastqc/data": {"fn": "fastqc_data.txt"},
+                        "fastqc/zip": {"fn": "*_fastqc.zip"},
+                    }
+                ],
+            )
 
     with section("Plot Settings"):
         with group("Rendering mode"):
@@ -509,9 +614,11 @@ class MultiQCConfig(BaseModel):
             )
             plots_flat_numseries: Optional[int] = cfg(
                 "If a plot has more than this many series, MultiQC switches it from interactive to flat image.",
+                gt=0,
             )
             plots_defer_loading_numseries: Optional[int] = cfg(
                 "Plots with more than this many series start collapsed. The user clicks a button to render them.",
+                gt=0,
             )
             num_datasets_plot_limit: Optional[int] = cfg(
                 "Deprecated. Use `plots_defer_loading_numseries` instead.",
@@ -520,6 +627,7 @@ class MultiQCConfig(BaseModel):
         with group("Appearance"):
             plots_export_font_scale: Optional[float] = cfg(
                 "Multiplier applied to font sizes in exported plot images. Bump up for publication-quality output.",
+                gt=0,
             )
             plot_font_family: Optional[str] = cfg(
                 "CSS font-family for plot text. Defaults to a system font stack.",
@@ -547,18 +655,23 @@ class MultiQCConfig(BaseModel):
             )
             box_min_threshold_outliers: Optional[int] = cfg(
                 "When a boxplot has more samples than this, only outlier points are drawn.",
+                gt=0,
             )
             box_min_threshold_no_points: Optional[int] = cfg(
                 "When a boxplot has more samples than this, no individual points are drawn.",
+                gt=0,
             )
             violin_downsample_after: Optional[int] = cfg(
                 "Start downsampling violin plot data once the sample count exceeds this. Keeps rendering snappy.",
+                gt=0,
             )
             violin_min_threshold_outliers: Optional[int] = cfg(
                 "When a violin plot has more samples than this, only outlier points are drawn.",
+                gt=0,
             )
             violin_min_threshold_no_points: Optional[int] = cfg(
                 "When a violin plot has more samples than this, no individual points are drawn.",
+                gt=0,
             )
 
     with section("Toolbox"):
@@ -568,7 +681,9 @@ class MultiQCConfig(BaseModel):
                 examples=[["control", "treated"]],
             )
             highlight_colors: Optional[List[str]] = cfg(
-                "Hex colour for each entry in highlight_patterns, in the same order.",
+                "CSS colour for each entry in highlight_patterns, in the same order. "
+                "Accepts hex (`#377eb8`), named colours (`red`), or any CSS colour function "
+                "(`rgb(...)`, `hsl(...)`).",
                 examples=[["#377eb8", "#e41a1c"]],
             )
             highlight_regex: Optional[bool] = cfg(
@@ -583,8 +698,11 @@ class MultiQCConfig(BaseModel):
                 "Patterns for each show/hide button. Each entry is a string or list of strings to match against sample names.",
                 examples=[[["_T_", "_tumour_"], ["_N_", "_normal_"]]],
             )
-            show_hide_mode: Optional[List[str]] = cfg(
-                "Action for each show/hide button: 'show' (only show matches) or 'hide' (hide matches).",
+            show_hide_mode: Optional[List[Literal["show", "hide", "show_re", "hide_re"]]] = cfg(
+                (
+                    "Action for each show/hide button: 'show' (only show matches), 'hide' (hide matches), "
+                    "or their `_re` variants which signal regex patterns (set by the TSV loader)."
+                ),
                 examples=[["show", "show"]],
             )
             show_hide_regex: Optional[List[Union[str, bool]]] = cfg(
@@ -599,9 +717,11 @@ class MultiQCConfig(BaseModel):
             )
             max_table_rows: Optional[int] = cfg(
                 "Tables larger than this many rows are rendered as a violin plot instead.",
+                gt=0,
             )
             max_configurable_table_columns: Optional[int] = cfg(
                 "Cap on the number of columns the user can toggle in the table-configure toolbox.",
+                gt=0,
             )
             decimalPoint_format: str = cfg(
                 "Decimal-point character used in formatted numbers. Defaults to `.`",
@@ -679,10 +799,12 @@ class MultiQCConfig(BaseModel):
                 ],
             )
         with group("Conditional formatting"):
-            table_cond_formatting_rules: Optional[Dict[str, Dict[str, List[Dict[str, Union[str, int, float]]]]]] = cfg(
+            table_cond_formatting_rules: Optional[Dict[str, Dict[str, List[CondFormattingRule]]]] = cfg(
                 (
-                    "Conditional cell formatting. Nested dicts map table ID to column ID to a list of rules "
-                    "(eg. {s_eq: pass} matches an exact value). See the customisation docs for the full grammar."
+                    "Conditional cell formatting. Nested dicts map table ID (or the literal 'all_columns') "
+                    "to colour ID to a list of rules. Each rule has exactly one operator: string operators "
+                    "(s_eq, s_ne, s_contains) compare case-insensitively; numeric operators (eq, ne, gt, lt, "
+                    "ge, le) cast both sides to float. See the customisation docs for the full grammar."
                 ),
                 examples=[
                     {
@@ -715,11 +837,7 @@ class MultiQCConfig(BaseModel):
             table_sample_merge: Optional[
                 Dict[
                     str,
-                    Union[
-                        str,
-                        Dict[str, Union[str, List[str]]],
-                        List[Union[str, Dict[str, Union[str, List[str]]]]],
-                    ],
+                    Union[str, CleanPattern, List[Union[str, CleanPattern]]],
                 ]
             ] = cfg(
                 (
@@ -741,9 +859,18 @@ class MultiQCConfig(BaseModel):
 
     with section("Software Versions"):
         with group("Software Versions"):
-            software_versions: Optional[Dict[str, Any]] = cfg(
-                "Manually specify software versions for the Software Versions section. Top-level keys are tool names.",
-                examples=[{"samtools": "1.20", "bwa": "0.7.17", "fastqc": "0.12.1"}],
+            software_versions: Optional[Dict[str, Union[str, List[str], Dict[str, Union[str, List[str]]]]]] = cfg(
+                (
+                    "Manually specify software versions for the Software Versions section. "
+                    "Top-level keys are group or software names. Values are a single version string, "
+                    "a list of version strings, or a dict mapping software name to a version "
+                    "string or list of version strings (when the group contains multiple tools)."
+                ),
+                examples=[
+                    {"samtools": "1.20", "bwa": "0.7.17", "fastqc": "0.12.1"},
+                    {"quast": ["5.2.0", "5.1.0"]},
+                    {"samtools": {"samtools": "1.11", "htslib": "1.3"}},
+                ],
             )
             versions_table_group_header: Optional[str] = cfg(
                 "Column header for the grouping column in the Software Versions table. Defaults to 'Group'.",
@@ -758,6 +885,7 @@ class MultiQCConfig(BaseModel):
             read_count_multiplier: Optional[float] = cfg(
                 "Multiplier applied to read counts before display. Default 0.000001 shows reads in millions.",
                 examples=[0.001],
+                gt=0,
             )
             read_count_prefix: Optional[str] = cfg(
                 "Suffix shown after formatted read counts, eg. 'M' for millions.",
@@ -771,6 +899,7 @@ class MultiQCConfig(BaseModel):
             long_read_count_multiplier: Optional[float] = cfg(
                 "Multiplier for long-read counts. Default 0.001 shows counts in thousands.",
                 examples=[0.000001],
+                gt=0,
             )
             long_read_count_prefix: Optional[str] = cfg(
                 "Suffix shown after formatted long-read counts, eg. 'K' for thousands.",
@@ -784,6 +913,7 @@ class MultiQCConfig(BaseModel):
             base_count_multiplier: Optional[float] = cfg(
                 "Multiplier for base counts. Default 0.000001 shows bases in megabases.",
                 examples=[0.001],
+                gt=0,
             )
             base_count_prefix: Optional[str] = cfg(
                 "Suffix shown after formatted base counts, eg. 'Mb' for megabases.",
@@ -847,6 +977,7 @@ class MultiQCConfig(BaseModel):
         with group("Tuning"):
             ai_retries: Optional[int] = cfg(
                 "Number of times to retry an AI request on transient errors.",
+                gt=0,
             )
             ai_extra_query_options: Optional[Dict[str, Any]] = cfg(
                 "Extra request-body fields merged into the AI request payload (provider-specific).",
@@ -858,6 +989,7 @@ class MultiQCConfig(BaseModel):
             )
             ai_max_completion_tokens: Optional[int] = cfg(
                 "Maximum completion tokens for OpenAI reasoning models.",
+                gt=0,
             )
             ai_reasoning_effort: Optional[Literal["low", "medium", "high"]] = cfg(
                 "Reasoning effort for OpenAI reasoning models.",
@@ -867,6 +999,7 @@ class MultiQCConfig(BaseModel):
             )
             ai_thinking_budget_tokens: Optional[int] = cfg(
                 "Token budget for Anthropic extended thinking when enabled.",
+                gt=0,
             )
 
     with section("MegaQC"):
@@ -879,6 +1012,7 @@ class MultiQCConfig(BaseModel):
             )
             megaqc_timeout: Optional[int] = cfg(
                 "Upload timeout in seconds when posting to MegaQC.",
+                gt=0,
             )
             megaqc_upload: Optional[bool] = cfg(
                 "Upload report data to MegaQC after generation. Requires megaqc_url and megaqc_access_token.",
@@ -920,15 +1054,16 @@ class MultiQCConfig(BaseModel):
                 "URL queried by MultiQC's own update check. Set to override the default endpoint.",
             )
 
-    # Search patterns. Excluded from the wizard via SKIP_PROPERTIES; rendered manually
-    # by generate_config_docs.py under "Special Types". No section.
-    sp: Optional[Dict[str, Union[SearchPattern, List[SearchPattern]]]] = Field(
-        None, description="Search patterns for finding tool outputs"
-    )
-
     model_config = ConfigDict(extra="allow")  # Allow additional fields that aren't in the schema
 
 
+@lru_cache(maxsize=1)
 def config_to_schema() -> Dict[str, Any]:
-    """Convert the config schema to a JSON Schema dict"""
+    """Convert the config schema to a JSON Schema dict.
+
+    Cached: Pydantic rebuilds the schema (~10ms) on every
+    ``model_json_schema()`` call, and ``multiqc/config.py:load_config_file``
+    fires this once per loaded config file. The schema is static for a process
+    lifetime, so a one-shot cache is safe.
+    """
     return MultiQCConfig.model_json_schema()

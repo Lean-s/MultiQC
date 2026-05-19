@@ -57,15 +57,54 @@ from _config_schema_loader import load_schema_and_defaults, load_sections_with_g
 from multiqc.utils.config_schema import (  # noqa: E402
     AiProviderLiteral,
     CleanPattern,
+    CondFormattingRule,
     GeneralStatsColumnConfig,
     GeneralStatsModuleConfig,
+    ModuleOverride,
     MultiQCConfig,
     SearchPattern,
+    SectionOrderOverride,
 )
 
-# Properties skipped in the section walk; sp is documented manually below under
-# "Special Types".
-SKIP_PROPERTIES = {"sp"}
+# Special-type names that are documented under "## Special Types" further down
+# the same page. References to these names are linkified to the in-page anchor.
+SPECIAL_TYPES = (
+    "SearchPattern",
+    "CleanPattern",
+    "GeneralStatsColumnConfig",
+    "GeneralStatsModuleConfig",
+    "CondFormattingRule",
+    "ModuleOverride",
+    "SectionOrderOverride",
+)
+_SPECIAL_TYPE_RE = re.compile(r"\b(" + "|".join(SPECIAL_TYPES) + r")\b")
+
+
+def linkify_type_string(type_str: str) -> str:
+    """Return an inline-code HTML rendering of ``type_str`` with ``SPECIAL_TYPES``
+    occurrences wrapped in same-page anchor links.
+
+    Inline-code is emitted as ``<code>...</code>`` rather than backticks so the
+    ``<a>`` link is rendered inside the monospace span.
+    """
+    body = _SPECIAL_TYPE_RE.sub(lambda m: f'<a href="#{m.group(1).lower()}">{m.group(1)}</a>', type_str)
+    return f"<code>{body}</code>"
+
+
+def linkify_markdown(text: str) -> str:
+    """Wrap bare ``SPECIAL_TYPES`` occurrences in markdown anchor links.
+
+    Matches inside backtick code spans are left alone (they render as monospace
+    code and shouldn't become links). Splitting on backticks keeps the
+    backticked segments verbatim and only linkifies the prose between them.
+    """
+    parts = text.split("`")
+    out = []
+    for i, segment in enumerate(parts):
+        if i % 2 == 0:  # outside backticks
+            segment = _SPECIAL_TYPE_RE.sub(lambda m: f"[{m.group(1)}](#{m.group(1).lower()})", segment)
+        out.append(segment)
+    return "`".join(out)
 
 
 def format_type_annotation(annotation):
@@ -116,18 +155,14 @@ def format_type_annotation(annotation):
         return "Dict"
     elif annotation is list or annotation is List:
         return "List"
-    elif annotation is SearchPattern:
-        return "SearchPattern"
-    elif annotation is CleanPattern:
-        return "CleanPattern"
-    elif annotation is GeneralStatsColumnConfig:
-        return "GeneralStatsColumnConfig"
-    elif annotation is GeneralStatsModuleConfig:
-        return "GeneralStatsModuleConfig"
     elif annotation is Any:
         return "Any"
 
-    # For any other type, return its string representation
+    # Classes (eg. Pydantic models) render as their plain class name, not the
+    # noisy ``<class 'multiqc.utils.config_schema.X'>`` form.
+    if isinstance(annotation, type):
+        return annotation.__name__
+
     return str(annotation).replace("typing.", "")
 
 
@@ -260,8 +295,8 @@ If you'd rather build your config visually, the [Config Wizard](https://seqera.i
 
         hashes = "#" * heading_level
         output.append(f"{hashes} `{prop_name}`\n")
-        output.append(f"**Type**: `{type_info}`{default_inline}\n")
-        output.append(f"{description}\n")
+        output.append(f"**Type**: {linkify_type_string(type_info)}{default_inline}\n")
+        output.append(f"{linkify_markdown(description)}\n")
         if default_block:
             output.append(default_block)
 
@@ -278,7 +313,7 @@ If you'd rather build your config visually, the [Config Wizard](https://seqera.i
     # is redundant under the section heading, so render the fields directly
     # under `## section` as `### prop_name`. Otherwise, emit `### group`
     # headings and demote fields to `#### prop_name`.
-    sections_with_groups = load_sections_with_groups(properties, skip=SKIP_PROPERTIES)
+    sections_with_groups = load_sections_with_groups(properties)
 
     for section, groups in sections_with_groups.items():
         if not groups:
@@ -297,12 +332,28 @@ If you'd rather build your config visually, the [Config Wizard](https://seqera.i
                 render_prop(prop_name, heading_level=prop_level)
         output.append("")  # Add blank line between sections
 
-    # Describe special types
+    def render_special_type(model_cls, body_md):
+        """Append a Special Types section for ``model_cls``.
+
+        ``body_md`` is the prose+example block shown under the heading. The
+        properties bullet list is built from ``get_type_hints(model_cls)`` and
+        descriptions pulled from the model's ``$defs`` entry.
+        """
+        name = model_cls.__name__
+        output.append(f"### {name}\n")
+        output.append(linkify_markdown(body_md) + "\n\nProperties:\n\n")
+        defs_props = schema.get("$defs", {}).get(name, {}).get("properties", {})
+        for prop_name, prop_type in sorted(get_type_hints(model_cls).items()):
+            description = defs_props.get(prop_name, {}).get("description", "")
+            type_info = format_type_annotation(prop_type)
+            output.append(f"- **{prop_name}** ({linkify_type_string(type_info)}): {linkify_markdown(description)}")
+        output.append("")
+
     output.append("## Special Types\n")
 
-    # Search Pattern
-    output.append("### SearchPattern\n")
-    output.append("""Configuration for file search patterns used to find tool outputs.
+    render_special_type(
+        SearchPattern,
+        """Configuration for file search patterns used to find tool outputs.
 
 The `SearchPattern` type is used in the `sp` configuration option to define patterns for finding and parsing tool output files.
 
@@ -315,25 +366,12 @@ sp:
   custom_tool:
     fn: "*.log"
     contents: "Started analysis"
-```
+```""",
+    )
 
-Properties:\n\n""")
-    search_pattern_attrs = get_type_hints(SearchPattern)
-    for prop_name, prop_type in sorted(search_pattern_attrs.items()):
-        # Get description from schema
-        description = ""
-        if "$defs" in schema and "SearchPattern" in schema["$defs"]:
-            sp_props = schema["$defs"]["SearchPattern"].get("properties", {})
-            if prop_name in sp_props:
-                description = sp_props[prop_name].get("description", "")
-
-        type_info = format_type_annotation(prop_type)
-        output.append(f"- **{prop_name}** (`{type_info}`): {description}")
-    output.append("")
-
-    # Clean Pattern
-    output.append("### CleanPattern\n")
-    output.append("""Pattern for cleaning sample names.
+    render_special_type(
+        CleanPattern,
+        """Pattern for cleaning sample names.
 
 The `CleanPattern` type is used in the `fn_clean_exts` and `extra_fn_clean_exts` configuration options to define patterns for cleaning sample names.
 
@@ -345,25 +383,12 @@ fn_clean_exts:
     pattern: '_S\\d+_L\\d+'
   - type: regex
     pattern: '\\d{4}-\\d{2}-\\d{2}'
-```
+```""",
+    )
 
-Properties:\n\n""")
-    clean_pattern_attrs = get_type_hints(CleanPattern)
-    for prop_name, prop_type in sorted(clean_pattern_attrs.items()):
-        # Get description from schema
-        description = ""
-        if "$defs" in schema and "CleanPattern" in schema["$defs"]:
-            cp_props = schema["$defs"]["CleanPattern"].get("properties", {})
-            if prop_name in cp_props:
-                description = cp_props[prop_name].get("description", "")
-
-        type_info = format_type_annotation(prop_type)
-        output.append(f"- **{prop_name}** (`{type_info}`): {description}")
-    output.append("")
-
-    # General Stats Column Configuration
-    output.append("### GeneralStatsColumnConfig\n")
-    output.append("""Configuration for columns in the general statistics table.
+    render_special_type(
+        GeneralStatsColumnConfig,
+        """Configuration for columns in the general statistics table.
 
 The `GeneralStatsColumnConfig` type is used in the `general_stats_columns` configuration option to customize the appearance and behavior of columns in the general statistics table.
 
@@ -379,20 +404,62 @@ general_stats_columns:
         scale: "RdYlGn-rev"
         max: 100
         min: 0
-```
+```""",
+    )
 
-Properties:\n\n""")
-    gs_col_attrs = get_type_hints(GeneralStatsColumnConfig)
-    for prop_name, prop_type in sorted(gs_col_attrs.items()):
-        # Get description from schema
-        description = ""
-        if "$defs" in schema and "GeneralStatsColumnConfig" in schema["$defs"]:
-            gs_props = schema["$defs"]["GeneralStatsColumnConfig"].get("properties", {})
-            if prop_name in gs_props:
-                description = gs_props[prop_name].get("description", "")
+    render_special_type(
+        CondFormattingRule,
+        """One conditional-formatting comparison for a table cell.
 
-        type_info = format_type_annotation(prop_type)
-        output.append(f"- **{prop_name}** (`{type_info}`): {description}")
+Used in the `table_cond_formatting_rules` configuration option. Each rule is a dict with exactly one operator key paired with its comparison value. String operators (`s_eq`, `s_ne`, `s_contains`) compare case-insensitively; numeric operators (`eq`, `ne`, `gt`, `lt`, `ge`, `le`) cast both sides via `float()`.
+
+Example:
+
+```yaml
+table_cond_formatting_rules:
+  all_columns:
+    pass:
+      - s_eq: "pass"
+    fail:
+      - gt: 50
+```""",
+    )
+
+    render_special_type(
+        ModuleOverride,
+        """Per-module override values for `top_modules` and `module_order` entries.
+
+Each entry in `top_modules` / `module_order` is either a module ID (string) or a single-key dict mapping the module ID to a `ModuleOverride` dict.
+
+Example:
+
+```yaml
+module_order:
+  - fastqc:
+      name: "FastQC (trimmed)"
+      anchor: "fastqc_trimmed"
+      path_filters:
+        - "*_trimmed*"
+```""",
+    )
+
+    render_special_type(
+        SectionOrderOverride,
+        """Override dict accepted as a `report_section_order` value.
+
+Each value in `report_section_order` is either the literal string `"remove"` (drops the section) or a `SectionOrderOverride` dict combining any of `order`, `before` and `after`.
+
+Example:
+
+```yaml
+report_section_order:
+  fastqc:
+    order: -10
+  custom_content-my-section:
+    before: fastqc
+  mod_section_2: remove
+```""",
+    )
 
     text = "\n".join(output)
     # Match Prettier's expectations so the file survives the commit hook

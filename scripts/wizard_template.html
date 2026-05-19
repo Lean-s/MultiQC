@@ -1406,7 +1406,7 @@
         border: 1px solid var(--border);
       }
       .validate-line-hl {
-        background: rgba(49, 201, 172, 0.18);
+        background: rgba(49, 201, 172, 0.08);
       }
       /* Monaco's marker-hover status bar shows "No quick fixes available"
          whenever no code-action provider is registered. We have no actions
@@ -4004,9 +4004,9 @@
         return best;
       }
 
-      // Some schema properties are excluded from the wizard form (SKIP_PROPERTIES,
-      // currently just `sp`) but are still valid YAML keys. Synthesise a minimal
-      // propData entry from the JSON schema so they classify correctly.
+      // Build a propData entry on the fly from the JSON schema, for any schema
+      // key that doesn't have a pre-rendered form input (e.g. plugin-registered
+      // extensions).
       function schemaPropData(name) {
         const p = configSchema.properties && configSchema.properties[name];
         if (!p) return null;
@@ -4301,8 +4301,7 @@
 
         // Ajv runs against the known-key subset so plugin keys don't dominate
         // the error list; unknown keys are reported separately with suggestions.
-        // "Known" = anything in the JSON schema (so SKIP_PROPERTIES like `sp`
-        // still get deep-validated even though they have no wizard form input).
+        // "Known" = anything in the JSON schema.
         const knownSet = new Set(propNames);
         const known = {};
         for (const [k, v] of Object.entries(parsed)) {
@@ -4364,6 +4363,7 @@
         if (monacoEditor && monacoLineDecorations.length) {
           monacoLineDecorations = monacoEditor.deltaDecorations(monacoLineDecorations, []);
         }
+        activeHighlightKey = null;
       }
 
       // Highlight + scroll-to for the given top-level key in the editor.
@@ -4396,17 +4396,28 @@
             document.querySelector(`#unknownKeysSection .validate-card[data-key="${CSS.escape(key)}"]`);
           if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
           if (target && target.classList.contains("form-group")) setFocusedFormGroup(target);
+          // Mirror the form-pane highlight in the editor so both sides stay
+          // in sync. Skip the auto-reveal: the user just clicked here, the
+          // line is already visible.
+          applyEditorKeyHighlight(key, { reveal: false });
           return;
         }
       }
 
+      // Track which key currently owns the editor highlight so repeat clicks
+      // inside the same key's range don't churn Monaco decorations.
+      let activeHighlightKey = null;
+
+      // Apply the validate-line-hl decoration to ``key``'s line range, or
+      // fall back to a textarea selection. ``reveal`` controls whether the
+      // editor scrolls the line into view (true for form→editor clicks,
+      // false for editor→form clicks where the line is already on screen).
       // deltaDecorations swaps in one tick so there's no flash between the
       // old highlight clearing and the new one appearing.
-      function jumpToKey(key) {
-        const fg = document.querySelector(`.form-group[data-propname="${CSS.escape(key)}"]`);
-        setFocusedFormGroup(fg);
+      function applyEditorKeyHighlight(key, { reveal = true } = {}) {
         const range = lastValidated.keyLineRanges[key];
         if (!range) return;
+        if (key === activeHighlightKey && !reveal) return;
 
         if (monacoEditor) {
           const r = new monaco.Range(range.start, 1, range.end, 1);
@@ -4420,9 +4431,11 @@
               },
             },
           ]);
-          monacoEditor.revealLineInCenterIfOutsideViewport(range.start);
+          activeHighlightKey = key;
+          if (reveal) monacoEditor.revealLineInCenterIfOutsideViewport(range.start);
           return;
         }
+        if (!reveal) return;
         // Textarea fallback: select the character range so the browser
         // scrolls and visually marks it (native selection, not whole-line).
         const ta = document.getElementById("validateInput");
@@ -4434,6 +4447,12 @@
         ta.setSelectionRange(start, end);
         const lineHeight = parseInt(getComputedStyle(ta).lineHeight, 10) || 18;
         ta.scrollTop = Math.max(0, (range.start - 3) * lineHeight);
+      }
+
+      function jumpToKey(key) {
+        const fg = document.querySelector(`.form-group[data-propname="${CSS.escape(key)}"]`);
+        setFocusedFormGroup(fg);
+        applyEditorKeyHighlight(key);
       }
 
       function defaultSweep(results) {
